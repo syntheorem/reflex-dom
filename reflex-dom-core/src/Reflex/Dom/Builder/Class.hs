@@ -98,16 +98,18 @@ class (Monad m, Reflex t, DomSpace (DomBuilderSpace m), NotReady t m, Adjustable
   {-# INLINABLE commentNode #-}
   element :: Text -> ElementConfig er t (DomBuilderSpace m) -> m a -> m (Element er (DomBuilderSpace m) t, a)
   default element :: ( MonadTransControl f
-                     , StT f a ~ a
                      , m ~ f m'
                      , DomBuilderSpace m' ~ DomBuilderSpace m
                      , DomBuilder t m'
                      )
                   => Text -> ElementConfig er t (DomBuilderSpace m) -> m a -> m (Element er (DomBuilderSpace m) t, a)
-  element t cfg child = liftWith $ \run -> element t cfg $ run child
+  element t cfg child = do
+    (el, st) <- liftWith (\run -> element t cfg $ run child)
+    a <- restoreT (return st)
+    pure (el, a)
   {-# INLINABLE element #-}
   inputElement :: InputElementConfig er t (DomBuilderSpace m) -> m (InputElement er (DomBuilderSpace m) t)
-  default inputElement :: ( MonadTransControl f
+  default inputElement :: ( MonadTrans f
                           , m ~ f m'
                           , DomBuilderSpace m' ~ DomBuilderSpace m
                           , DomBuilder t m'
@@ -116,7 +118,7 @@ class (Monad m, Reflex t, DomSpace (DomBuilderSpace m), NotReady t m, Adjustable
   inputElement = lift . inputElement
   {-# INLINABLE inputElement #-}
   textAreaElement :: TextAreaElementConfig er t (DomBuilderSpace m) -> m (TextAreaElement er (DomBuilderSpace m) t)
-  default textAreaElement :: ( MonadTransControl f
+  default textAreaElement :: ( MonadTrans f
                              , m ~ f m'
                              , DomBuilderSpace m' ~ DomBuilderSpace m
                              , DomBuilder t m'
@@ -126,14 +128,15 @@ class (Monad m, Reflex t, DomSpace (DomBuilderSpace m), NotReady t m, Adjustable
   {-# INLINABLE textAreaElement #-}
   selectElement :: SelectElementConfig er t (DomBuilderSpace m) -> m a -> m (SelectElement er (DomBuilderSpace m) t, a)
   default selectElement :: ( MonadTransControl f
-                           , StT f a ~ a
                            , m ~ f m'
                            , DomBuilderSpace m' ~ DomBuilderSpace m
                            , DomBuilder t m'
                            )
                         => SelectElementConfig er t (DomBuilderSpace m) -> m a -> m (SelectElement er (DomBuilderSpace m) t, a)
   selectElement cfg child = do
-    liftWith $ \run -> selectElement cfg $ run child
+    (el, st) <- liftWith $ \run -> selectElement cfg $ run child
+    a <- restoreT (return st)
+    pure (el, a)
   {-# INLINABLE selectElement #-}
   placeRawElement :: RawElement (DomBuilderSpace m) -> m ()
   default placeRawElement :: ( MonadTrans f
